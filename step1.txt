@@ -1,0 +1,13 @@
+pip install python-decouple
+
+and configure settings.py
+
+
+------settings.py----------
+
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR/'media/'
+
+
+AUTH_USER_MODEL = 'users.User'
