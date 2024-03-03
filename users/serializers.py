@@ -25,10 +25,14 @@ class SignUpSerializer(serializers.ModelSerializer):
         if user.auth_type == VIA_EMAIL:
             code = user.create_verify_code(VIA_EMAIL)
             send_email(user.email, code)
-        elif user.auth_type == VIA_PHONE:
 
+        elif user.auth_type == VIA_PHONE:
             code = user.create_verify_code(VIA_PHONE)
+            send_email(user.phone_number, code)
+
         user.save()
+
+        return user
 
     def validate(self,data):
         super(SignUpSerializer,self).validate(data)
@@ -60,5 +64,27 @@ class SignUpSerializer(serializers.ModelSerializer):
         return data
 
     def validate_email_phone_number(self,value):
-        value.lower()
+        value = value.lower()
+
+        if value and User.objects.filter(email=value).exists():
+            data = {
+                "status":False,
+                "message":"This email is already in our database"
+            }
+            raise ValidationError(data)
+        elif value and User.objects.filter(phone_number=value).exists():
+            data = {
+                "status": False,
+                "message": "This phone_number is already in our database"
+            }
+            raise ValidationError(data)
+
         return value
+
+
+    def to_representation(self, instance):
+
+        data = super(SignUpSerializer, self).to_representation(instance)
+        data.update(instance.token())
+
+        return data
