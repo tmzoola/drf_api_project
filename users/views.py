@@ -1,15 +1,16 @@
 from datetime import datetime
 
 from rest_framework import generics
+from rest_framework.generics import UpdateAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
 from shared.utils import send_email
 from .models import User,NEW,CODE_VERIFIED,DONE,PHOTO_STEP,VIA_PHONE,VIA_EMAIL
-from .serializers import SignUpSerializer
+from .serializers import SignUpSerializer,ChangeUserInfoSerializer,ChangeUserPhotoSerializer,LoginSerializer
 from rest_framework.permissions import AllowAny,IsAuthenticated
-
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 
 
@@ -95,3 +96,51 @@ class GetNewVerification(APIView):
                 "messaga":"Sizda tasdiqlash ko'di mavjud. Biroz kutib turing"
             }
             raise ValidationError(data)
+
+class ChangeUserInfoView(UpdateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ChangeUserInfoSerializer
+    http_method_names = ['put','patch']
+
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        super(ChangeUserInfoView,self).update(request, *args, **kwargs)
+
+        data = {
+            "status":True,
+            "message":"User ma'lumotlari muvafaqiyatli o'zgartirildi",
+            "auth_status":self.request.user.auth_status
+        }
+        return Response(data)
+    def partial_update(self, request, *args, **kwargs):
+        super(ChangeUserInfoView,self).update(request, *args, **kwargs)
+
+        data = {
+            "status":True,
+            "message":"User ma'lumotlari muvafaqiyatli o'zgartirildi",
+            "auth_status":self.request.user.auth_status
+        }
+        return Response(data)
+
+class ChangeUserPhotoView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def put(self,request, *args,**kwargs):
+        serializer = ChangeUserPhotoSerializer(data=request.data)
+
+        if serializer.is_valid():
+            user = request.user
+            serializer.update(user, serializer.validated_data)
+
+            data = {
+                "status":True,
+                "message":"Rasm muvafaqiyatli o'zgartirildi"
+            }
+            return Response(data)
+
+        return Response(serializer.errors)
+
+class LoginView(TokenObtainPairView):
+    serializer_class = LoginSerializer
