@@ -1,11 +1,17 @@
+from typing import Dict, Any
+
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import update_last_login
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from .models import UserConfirmation, User,VIA_PHONE,VIA_EMAIL,NEW,CODE_VERIFIED,DONE,PHOTO_STEP
+from rest_framework.generics import get_object_or_404
+from rest_framework_simplejwt.tokens import AccessToken
+
+from .models import User,VIA_PHONE,VIA_EMAIL,NEW,CODE_VERIFIED,DONE,PHOTO_STEP
 from rest_framework.exceptions import ValidationError,PermissionDenied
 from shared.utils import check_email_or_phone,send_email,check_username_phone_email
 from django.core.validators import FileExtensionValidator
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer,TokenRefreshSerializer
 
 
 class SignUpSerializer(serializers.ModelSerializer):
@@ -247,8 +253,22 @@ class LoginSerializer(TokenObtainPairSerializer):
 
 
 
+class LoginRefreshSerializer(TokenRefreshSerializer):
+
+    def validate(self, arrts: Dict[str, Any]) -> Dict[str, str]:
+        data = super().validate(arrts)
+
+        access_token_instance = AccessToken(data['access'])
+        user_id = access_token_instance['user_id']
+        user = get_object_or_404(User, id=user_id)
+        update_last_login(None,user)
+
+        return data
 
 
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
 
 
 
