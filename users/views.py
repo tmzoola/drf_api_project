@@ -8,9 +8,10 @@ from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from shared.utils import send_email
+from shared.utils import send_email,check_email_or_phone
 from .models import User,NEW,CODE_VERIFIED,VIA_PHONE,VIA_EMAIL
-from .serializers import SignUpSerializer,ChangeUserInfoSerializer,ChangeUserPhotoSerializer,LoginSerializer,LoginRefreshSerializer,LogoutSerializer
+from .serializers import (SignUpSerializer, ChangeUserInfoSerializer, ChangeUserPhotoSerializer, LoginSerializer,
+                          LoginRefreshSerializer, LogoutSerializer, ForgotPasswordSerializer, ResetPasswordSerializer)
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView,TokenRefreshView
 
@@ -171,3 +172,52 @@ class LogoutView(APIView):
 
         except TokenError:
             return Response(status=400)
+
+class ForgotPasswordView(APIView):
+    serializer_class = ForgotPasswordSerializer
+    permission_classes = (AllowAny,)
+
+    def post(self,request):
+        serializer = self.serializer_class(data=self.request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email_or_phone = serializer.validated_data.get('email_or_phone')
+        user = serializer.validated_data.get('user')
+
+        if check_email_or_phone(email_or_phone) == 'phone':
+            code = user.create_verify_code(VIA_PHONE)
+            send_email(email_or_phone,code)
+
+        elif check_email_or_phone(email_or_phone)=='email':
+            code = user.create_verify_code(VIA_EMAIL)
+            send_email(email_or_phone,code)
+
+        data = {
+            "status":True,
+            "message":"Tasdiqlash kodi jo'natildi",
+            "access":user.token()['access'],
+            "refresh":user.token()['refresh']
+        }
+
+        return Response(data)
+
+
+class ResetPasswordView(UpdateAPIView):
+    serializer_class = ResetPasswordSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        super(ResetPasswordView,self).update(request, *args,**kwargs)
+        user = self.request.user
+
+        data = {
+            "status":True,
+            "message":"Parolingiz muvafaqiyatli o'zgartirildi",
+            "access":user.token()['access'],
+            "refresh":user.token()['refresh']
+        }
+
+        return Response(data)

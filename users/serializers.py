@@ -3,6 +3,7 @@ from typing import Dict, Any
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
 from django.contrib.auth.password_validation import validate_password
+from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 from rest_framework_simplejwt.tokens import AccessToken
@@ -12,6 +13,7 @@ from rest_framework.exceptions import ValidationError,PermissionDenied
 from shared.utils import check_email_or_phone,send_email,check_username_phone_email
 from django.core.validators import FileExtensionValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer,TokenRefreshSerializer
+
 
 
 class SignUpSerializer(serializers.ModelSerializer):
@@ -271,5 +273,59 @@ class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
 
+class ForgotPasswordSerializer(serializers.Serializer):
+    email_or_phone = serializers.CharField(write_only=True,required=True)
+
+    def validate(self, data):
+        email_or_phone = data.get('email_or_phone',None)
+
+        if email_or_phone is None:
+            data = {
+                "status":False,
+                "message":"Email yoki telefon raqam kiritilishi shart"
+            }
+            raise ValidationError(data)
+
+        user = User.objects.filter(Q(phone_number=email_or_phone) | Q(email=email_or_phone))
+
+        if not user.exists():
+            data = {
+                "status": False,
+                "message": "Email yoki telefon raqam topilmadi"
+            }
+            raise ValidationError(data)
+        data['user'] = user.first()
+
+        return data
+
+class ResetPasswordSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(min_length=8, required=True,write_only=True)
+    confirm_password = serializers.CharField(min_length=8, required=True,write_only=True)
+
+    class Meta:
+        model = User
+        fields = ('password', 'confirm_password')
 
 
+    def validate(self, data):
+
+        password = data.get('password',None)
+        confirm_password = data.get('password',None)
+
+        if password != confirm_password:
+            data = {
+                "status":False,
+                "message":"Passwordlar bir-biriga teng emas"
+            }
+            raise ValidationError(data)
+
+        if password:
+            validate_password(password)
+
+        return data
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password')
+        instance.set_password(password)
+
+        return super(ResetPasswordSerializer,self).update(instance,validated_data)
