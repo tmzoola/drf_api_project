@@ -47,7 +47,8 @@ INSTALLED_APPS = [
 
     # local_apps
     'users',
-    'shared'
+    'shared',
+    'posts',
 ]
 
 REST_FRAMEWORK ={
