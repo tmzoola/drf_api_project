@@ -18,6 +18,8 @@ class Post(BaseModel):
     )
     caption = models.TextField(validators=[MaxLengthValidator(2000)])
 
+    def __str__(self):
+        return f"{self.author} post about {self.caption}"
 
     class Meta:
         db_table = 'posts'
@@ -36,24 +38,30 @@ class PostComment(BaseModel):
                                blank=True
                                )
 
+    def __str__(self):
+        return f"comment by {self.author}"
+
 class PostLike(BaseModel):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
 
 
     class Meta:
-        constraint = [
+        constraints = [
             UniqueConstraint(
                 fields=['author','post'],
+                name='unique_post_like'
             )
         ]
+
 class CommentLike(BaseModel):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     comment = models.ForeignKey(PostComment, on_delete=models.CASCADE, related_name='likes')
 
     class Meta:
-        constraint = [
+        constraints = [
             UniqueConstraint(
                 fields=['author','comment'],
+                name='unique_comment_like'
             )
         ]
