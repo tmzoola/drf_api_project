@@ -41,18 +41,19 @@ class PostComment(BaseModel):
     def __str__(self):
         return f"comment by {self.author}"
 
+
 class PostLike(BaseModel):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
 
-
     class Meta:
         constraints = [
             UniqueConstraint(
-                fields=['author','post'],
+                fields=['author', 'post'],
                 name='unique_post_like'
             )
         ]
+
 
 class CommentLike(BaseModel):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -61,7 +62,7 @@ class CommentLike(BaseModel):
     class Meta:
         constraints = [
             UniqueConstraint(
-                fields=['author','comment'],
+                fields=['author', 'comment'],
                 name='unique_comment_like'
             )
         ]
